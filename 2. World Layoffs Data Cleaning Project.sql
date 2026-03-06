@@ -1,30 +1,30 @@
 -- Data Cleaning
 
-SELECT * 
-FROM layoffs;
-
 -- 1. Remove Duplicates
 -- 2. Standardize the Data
 -- 3. Null Values or blank values
 -- 4. Remove any Columns ** not from raw dataset**
 
 
+SELECT * 
+FROM layoffs;
+
 -- Remove Duplicates
-CREATE TABLE layoffs_staging
+CREATE TABLE layoffs_staging				--- create stage table to make changes to data
 LIKE layoffs;
 
-INSERT layoffs_staging
+INSERT layoffs_staging						--- copy data from orginal table (layoffs) to stage table (layoffs_staging)
 SELECT *
 FROM layoffs;
 
 
 SELECT *,
-ROW_NUMBER() OVER(
+ROW_NUMBER() OVER(							--- use 'ROW_NUMBER()' (WINDOW FUNCTION) to identify duplicate records
 PARTITION BY company, industry, total_laid_off, percentage_laid_off, `date`) AS row_num
 FROM layoffs_staging;
 
-WITH duplicate_cte AS
-(SELECT *,
+WITH duplicate_cte AS						--- used CTE to create a temporary table to find any duplicate rows
+(SELECT *,									
 ROW_NUMBER() OVER(
 PARTITION BY company, location, industry, total_laid_off, 
 percentage_laid_off, `date`, stage, country, 
@@ -33,13 +33,13 @@ FROM layoffs_staging
 )
 SELECT *
 FROM duplicate_cte
-WHERE row_num >1;
+WHERE row_num >1;						---any row with row_num >1 is identified as duplicate
 
-SELECT *
+SELECT *								---example used to find duplicate
 FROM layoffs_staging
 WHERE company = 'Casper';
 
-CREATE TABLE `layoffs_staging2` (
+CREATE TABLE `layoffs_staging2` (				---create a new table and add one column 'row_num' to filter duplicates
   `company` text,
   `location` text,
   `industry` text,
@@ -49,13 +49,13 @@ CREATE TABLE `layoffs_staging2` (
   `stage` text,
   `country` text,
   `funds_raised_millions` int DEFAULT NULL,
-  `row_num` INT
+  `row_num` INT										---added 'row_num' to new table 'layoffs_staging2'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 SELECT *
-FROM layoffs_staging2;
+FROM layoffs_staging2;							---new table shows an additional column 'row_num' with empty records
 
-INSERT INTO layoffs_staging2
+INSERT INTO layoffs_staging2					---copy all columns from orginal table into new duplicate table 'layoffs_staging2'
 SELECT *,
 ROW_NUMBER() OVER(
 PARTITION BY company, location, industry, total_laid_off, 
@@ -63,11 +63,11 @@ percentage_laid_off, `date`, stage, country,
 funds_raised_millions) AS row_num
 FROM layoffs_staging;
 
-SELECT *
+SELECT *								---- row_num shows duplicate rows
 FROM layoffs_staging2
 WHERE row_num > 1;
 
-DELETE
+DELETE								--- deletes duplicate rows
 FROM layoffs_staging2
 WHERE row_num > 1;
 
